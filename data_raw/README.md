@@ -1,1 +1,2 @@
-This file contains the raw data obtained from MetaLab v2.1
+This folder contains the raw data, microbiome and human proteome, 
+obtained from MetaLab v2.1.
