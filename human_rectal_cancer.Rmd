@@ -1,5 +1,5 @@
 ---
-title: "Human data process"
+title: "Human data processing"
 author: "Sebastián Sáenz"
 date: "09/11/2020"
 output: github_document
@@ -14,39 +14,261 @@ library(tidyverse)
 * `tidyverse` (v . `r packageVersion("tidyverse")`)
 
 
+## 1. Human proteome
+
+Quality control data was obtained from the `summary.txt` ouput form MetaLab.
+
 ```{r summary_df}
-summary_df <- read.table("data_raw/human/summary.txt",
+summary_df_human <- read.table("data_raw/human/summary.txt",
                  header = TRUE,
                  sep = "\t",
                  check.names = FALSE)
 ```
 
+#### Number of peptide sequences identified
 
 ```{r peptides_plot,}
-summary_df %>%
+summary_df_human %>%
   filter(!`Peptide Sequences Identified` > 30000) %>%
 ggplot(aes(x =`Peptide Sequences Identified`)) +
   geom_histogram(binwidth = 100) +
   scale_x_continuous(breaks = seq(0, 10000, by = 500)) +
   ylab("Number of samples") +
-  theme(axis.text.x = element_text(angle = 45))
+  scale_y_continuous(expand = c(0,0)) +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+summary_df_human %>%
+  filter(!`Peptide Sequences Identified` > 30000) %>%
+ggplot(aes(x =`Raw file`,
+           y =`Peptide Sequences Identified`))+
+  geom_point(stat = "identity") +
+  scale_y_continuous(expand = c(0,0)) +
+  theme_classic() +
+  theme(axis.text.x = element_text(size = 1, angle = 90))
+  
+  
+```
+
+Total of peptides identified:
+```{r}
+sum(summary_df_human$`Peptide Sequences Identified`)
 ```
 
 
+
+Summary:
+```{r}
+summary(summary_df_human$`Peptide Sequences Identified`)
+```
+
+
+#### Percentage of MS/MS Identified
 ```{r msms_plot}
-ggplot(data = summary_df, aes(x =`MS/MS Identified [%]` )) +
+ggplot(data = summary_df_human, aes(x =`MS/MS Identified [%]` )) +
   geom_histogram(binwidth = 1) +
   scale_x_continuous(breaks = seq(0,23, by = 1)) +
   scale_y_continuous(breaks = seq(0,70, by = 5)) +
   theme_classic()
+
+summary_df_human %>%
+ggplot(aes(x =`Raw file`,
+           y =`MS/MS Identified [%]`))+
+  geom_point(stat = "identity") +
+  scale_y_continuous(expand = c(0,0), limits = c(0,25)) +
+  theme_classic() +
+  theme(axis.text.x = element_text(size = 1, angle = 90))
 ```
 
-
+Summary:
 
 ```{r}
-pep_mean <- mean(summary_df$`Peptide Sequences Identified`) 
+summary(summary_df_human$`MS/MS Identified [%]`)
 ```
 
+
+#### Standard protein
+
+We used two proteins as standard
+
+* Enolase 1 [P00924](https://www.uniprot.org/uniprot/P00924)
+* Alcohol dehydrogenase 1 [P00330](https://www.uniprot.org/uniprot/P00330)
+```{r proteingroup}
+pg_df_human <- read.table("data_raw/human/proteinGroups_clean.txt",
+                 header = TRUE,
+                 sep = "\t",
+                 check.names = FALSE)
+
+pg_df_human %>%
+  filter(`Protein IDs` == "P00924" | `Protein IDs` == "P00330") %>%
+  pivot_longer(cols = 2:281,
+               names_to = "samples",
+               values_to = "Int") %>%
+  mutate(log_int = log10(Int)) %>%
+  ggplot(aes(x = samples,
+             y = log_int,
+           colour =`Protein IDs`)) +
+  geom_point() +
+  theme_classic() +
+  theme(axis.text.x = element_text(size = 1, angle = 90))
+
+pg_df_human %>%
+  filter(`Protein IDs` == "P00924" | `Protein IDs` == "P00330") %>%
+  pivot_longer(cols = 2:281,
+               names_to = "samples",
+               values_to = "Int") %>%
+  mutate(log_int = log10(Int)) %>%
+  ggplot(aes(x = `Protein IDs`,
+             y = log_int,
+           colour =`Protein IDs`)) +
+  geom_boxplot() +
+  geom_jitter(width = 0.2, color = "black") +
+  theme_classic() +
+  theme(axis.text.x = element_text(size = 1, angle = 90))
+
+```
+
+* Enolase 1
+```{r}
+pg_df_human %>%
+  filter(`Protein IDs` == "P00924") %>%
+  pivot_longer(cols = 2:281,
+               names_to = "samples",
+               values_to = "Int") %>%
+  summary()
+```
+
+* Alcohol dehydrogenase 1
+```{r}
+pg_df_human %>%
+  filter(`Protein IDs` == "P00330") %>%
+  pivot_longer(cols = 2:281,
+               names_to = "samples",
+               values_to = "Int") %>%
+  summary()
+```
+
+
+
+## 2. Microbiome metaproteome
+
+Quality control data was obtained from the `summary.txt` ouput form MetaLab.
+
+```{r summary_df_micro}
+summary_df_micro <- read.table("data_raw/microbiome/summary.txt",
+                 header = TRUE,
+                 sep = "\t",
+                 check.names = FALSE)
+```
+
+#### Number of peptide sequences identified
+
+```{r peptides_plot_micro,}
+summary_df_micro %>%
+  filter(!`Peptide Sequences Identified` > 30000) %>%
+ggplot(aes(x =`Peptide Sequences Identified`)) +
+  geom_histogram(binwidth = 100) +
+  scale_x_continuous(breaks = seq(0, 10000, by = 500)) +
+  ylab("Number of samples") +
+  scale_y_continuous(expand = c(0,0)) +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+summary_df_micro %>%
+  filter(!`Peptide Sequences Identified` > 30000) %>%
+ggplot(aes(x =`Raw file`,
+           y =`Peptide Sequences Identified`))+
+  geom_point(stat = "identity") +
+  scale_y_continuous(expand = c(0,0)) +
+  theme_classic() +
+  theme(axis.text.x = element_text(size = 1, angle = 90))
+  
+  
+```
+
+Total of peptides identified:
+```{r}
+sum(summary_df_micro$`Peptide Sequences Identified`)
+```
+
+
+
+Summary:
+```{r}
+summary(summary_df_micro$`Peptide Sequences Identified`)
+```
+
+
+#### Percentage of MS/MS Identified
+```{r msms_plot_micro}
+ggplot(data = summary_df_micro, aes(x =`MS/MS Identified [%]` )) +
+  geom_histogram(binwidth = 0.5) +
+  scale_x_continuous(breaks = seq(0,23, by = 1)) +
+  scale_y_continuous(breaks = seq(0,70, by = 5)) +
+  theme_classic()
+
+summary_df_micro %>%
+ggplot(aes(x =`Raw file`,
+           y =`MS/MS Identified [%]`))+
+  geom_point(stat = "identity") +
+  scale_y_continuous(expand = c(0,0), limits = c(0,25)) +
+  theme_classic() +
+  theme(axis.text.x = element_text(size = 1, angle = 90))
+```
+
+Summary:
+
+```{r}
+summary(summary_df_micro$`MS/MS Identified [%]`)
+```
+
+
+#### Standard protein
+```{r proteingroup_micro}
+pg_df_micro <- read.table("data_raw/microbiome/proteinGroups_clean.txt",
+                 header = TRUE,
+                 sep = "\t",
+                 check.names = FALSE)
+
+pg_df_micro %>%
+  filter(`Protein IDs` == "sp|P00924|;O2.UC17-1_GL0070718" | `Protein IDs` == "P00330") %>%
+  pivot_longer(cols = 2:281,
+               names_to = "samples",
+               values_to = "Int") %>%
+  mutate(log_int = log10(Int)) %>%
+  ggplot(aes(x = samples,
+             y = log_int,
+           colour =`Protein IDs`)) +
+  geom_point() +
+  theme_classic() +
+  theme(axis.text.x = element_text(size = 1, angle = 90))
+
+pg_df_micro %>%
+  filter(`Protein IDs` == "sp|P00924|;O2.UC17-1_GL0070718" | `Protein IDs` == "P00330") %>%
+  pivot_longer(cols = 2:281,
+               names_to = "samples",
+               values_to = "Int") %>%
+  mutate(log_int = log10(Int)) %>%
+  ggplot(aes(x = `Protein IDs`,
+             y = log_int,
+           colour =`Protein IDs`)) +
+  geom_boxplot() +
+  geom_jitter(width = 0.2, color = "black") +
+  theme_classic() +
+  theme(axis.text.x = element_text(size = 1, angle = 90))
+
+```
+
+* Enolase 1 clustered with [Enolase (Slackia piriformis YIT 12062)](https://www.uniprot.org/blast/uniprot/B20201111A94466D2655679D1FD8953E075198DA80108F2H)
+
+```{r}
+pg_df_micro %>%
+  filter(`Protein IDs` == "sp|P00924|;O2.UC17-1_GL0070718") %>%
+  pivot_longer(cols = 2:281,
+               names_to = "samples",
+               values_to = "Int") %>%
+  summary()
+```
 
 ## My computer
 

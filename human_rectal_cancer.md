@@ -1,4 +1,4 @@
-Human data process
+Human data processing
 ================
 Sebastián Sáenz
 09/11/2020
@@ -8,29 +8,68 @@ Sebastián Sáenz
   - R version 4.0.2 (2020-06-22)
   - `tidyverse` (v . 1.3.0)
 
-<!-- end list -->
+## 1\. Human proteome
+
+Quality control data was obtained from the `summary.txt` ouput form
+MetaLab.
 
 ``` r
-summary_df <- read.table("data_raw/human/summary.txt",
+summary_df_human <- read.table("data_raw/human/summary.txt",
                  header = TRUE,
                  sep = "\t",
                  check.names = FALSE)
 ```
 
+#### Number of peptide sequences identified
+
 ``` r
-summary_df %>%
+summary_df_human %>%
   filter(!`Peptide Sequences Identified` > 30000) %>%
 ggplot(aes(x =`Peptide Sequences Identified`)) +
   geom_histogram(binwidth = 100) +
   scale_x_continuous(breaks = seq(0, 10000, by = 500)) +
   ylab("Number of samples") +
-  theme(axis.text.x = element_text(angle = 45))
+  scale_y_continuous(expand = c(0,0)) +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
 
 ![](human_rectal_cancer_files/figure-gfm/peptides_plot-1.png)<!-- -->
 
 ``` r
-ggplot(data = summary_df, aes(x =`MS/MS Identified [%]` )) +
+summary_df_human %>%
+  filter(!`Peptide Sequences Identified` > 30000) %>%
+ggplot(aes(x =`Raw file`,
+           y =`Peptide Sequences Identified`))+
+  geom_point(stat = "identity") +
+  scale_y_continuous(expand = c(0,0)) +
+  theme_classic() +
+  theme(axis.text.x = element_text(size = 1, angle = 90))
+```
+
+![](human_rectal_cancer_files/figure-gfm/peptides_plot-2.png)<!-- -->
+
+Total of peptides identified:
+
+``` r
+sum(summary_df_human$`Peptide Sequences Identified`)
+```
+
+    ## [1] 543320
+
+Summary:
+
+``` r
+summary(summary_df_human$`Peptide Sequences Identified`)
+```
+
+    ##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+    ##      89    1517    2050    1934    2421   10821
+
+#### Percentage of MS/MS Identified
+
+``` r
+ggplot(data = summary_df_human, aes(x =`MS/MS Identified [%]` )) +
   geom_histogram(binwidth = 1) +
   scale_x_continuous(breaks = seq(0,23, by = 1)) +
   scale_y_continuous(breaks = seq(0,70, by = 5)) +
@@ -40,8 +79,272 @@ ggplot(data = summary_df, aes(x =`MS/MS Identified [%]` )) +
 ![](human_rectal_cancer_files/figure-gfm/msms_plot-1.png)<!-- -->
 
 ``` r
-pep_mean <- mean(summary_df$`Peptide Sequences Identified`) 
+summary_df_human %>%
+ggplot(aes(x =`Raw file`,
+           y =`MS/MS Identified [%]`))+
+  geom_point(stat = "identity") +
+  scale_y_continuous(expand = c(0,0), limits = c(0,25)) +
+  theme_classic() +
+  theme(axis.text.x = element_text(size = 1, angle = 90))
 ```
+
+![](human_rectal_cancer_files/figure-gfm/msms_plot-2.png)<!-- -->
+
+Summary:
+
+``` r
+summary(summary_df_human$`MS/MS Identified [%]`)
+```
+
+    ##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+    ##   0.990   4.900   6.400   7.058   8.000  22.000
+
+#### Standard protein
+
+We used two proteins as standard
+
+  - Enolase 1 [P00924](https://www.uniprot.org/uniprot/P00924)
+  - Alcohol dehydrogenase 1
+    [P00330](https://www.uniprot.org/uniprot/P00330)
+
+<!-- end list -->
+
+``` r
+pg_df_human <- read.table("data_raw/human/proteinGroups_clean.txt",
+                 header = TRUE,
+                 sep = "\t",
+                 check.names = FALSE)
+
+pg_df_human %>%
+  filter(`Protein IDs` == "P00924" | `Protein IDs` == "P00330") %>%
+  pivot_longer(cols = 2:281,
+               names_to = "samples",
+               values_to = "Int") %>%
+  mutate(log_int = log10(Int)) %>%
+  ggplot(aes(x = samples,
+             y = log_int,
+           colour =`Protein IDs`)) +
+  geom_point() +
+  theme_classic() +
+  theme(axis.text.x = element_text(size = 1, angle = 90))
+```
+
+![](human_rectal_cancer_files/figure-gfm/proteingroup-1.png)<!-- -->
+
+``` r
+pg_df_human %>%
+  filter(`Protein IDs` == "P00924" | `Protein IDs` == "P00330") %>%
+  pivot_longer(cols = 2:281,
+               names_to = "samples",
+               values_to = "Int") %>%
+  mutate(log_int = log10(Int)) %>%
+  ggplot(aes(x = `Protein IDs`,
+             y = log_int,
+           colour =`Protein IDs`)) +
+  geom_boxplot() +
+  geom_jitter(width = 0.2, color = "black") +
+  theme_classic() +
+  theme(axis.text.x = element_text(size = 1, angle = 90))
+```
+
+![](human_rectal_cancer_files/figure-gfm/proteingroup-2.png)<!-- -->
+
+  - Enolase 1
+
+<!-- end list -->
+
+``` r
+pg_df_human %>%
+  filter(`Protein IDs` == "P00924") %>%
+  pivot_longer(cols = 2:281,
+               names_to = "samples",
+               values_to = "Int") %>%
+  summary()
+```
+
+    ##  Protein IDs          samples               Int           
+    ##  Length:280         Length:280         Min.   :3.135e+09  
+    ##  Class :character   Class :character   1st Qu.:9.370e+09  
+    ##  Mode  :character   Mode  :character   Median :1.946e+10  
+    ##                                        Mean   :9.274e+10  
+    ##                                        3rd Qu.:6.185e+10  
+    ##                                        Max.   :1.470e+12
+
+  - Alcohol dehydrogenase 1
+
+<!-- end list -->
+
+``` r
+pg_df_human %>%
+  filter(`Protein IDs` == "P00330") %>%
+  pivot_longer(cols = 2:281,
+               names_to = "samples",
+               values_to = "Int") %>%
+  summary()
+```
+
+    ##  Protein IDs          samples               Int           
+    ##  Length:280         Length:280         Min.   :3.814e+09  
+    ##  Class :character   Class :character   1st Qu.:1.122e+10  
+    ##  Mode  :character   Mode  :character   Median :2.497e+10  
+    ##                                        Mean   :1.224e+11  
+    ##                                        3rd Qu.:8.919e+10  
+    ##                                        Max.   :1.990e+12
+
+## 2\. Microbiome metaproteome
+
+Quality control data was obtained from the `summary.txt` ouput form
+MetaLab.
+
+``` r
+summary_df_micro <- read.table("data_raw/microbiome/summary.txt",
+                 header = TRUE,
+                 sep = "\t",
+                 check.names = FALSE)
+```
+
+#### Number of peptide sequences identified
+
+``` r
+summary_df_micro %>%
+  filter(!`Peptide Sequences Identified` > 30000) %>%
+ggplot(aes(x =`Peptide Sequences Identified`)) +
+  geom_histogram(binwidth = 100) +
+  scale_x_continuous(breaks = seq(0, 10000, by = 500)) +
+  ylab("Number of samples") +
+  scale_y_continuous(expand = c(0,0)) +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+![](human_rectal_cancer_files/figure-gfm/peptides_plot_micro-1.png)<!-- -->
+
+``` r
+summary_df_micro %>%
+  filter(!`Peptide Sequences Identified` > 30000) %>%
+ggplot(aes(x =`Raw file`,
+           y =`Peptide Sequences Identified`))+
+  geom_point(stat = "identity") +
+  scale_y_continuous(expand = c(0,0)) +
+  theme_classic() +
+  theme(axis.text.x = element_text(size = 1, angle = 90))
+```
+
+![](human_rectal_cancer_files/figure-gfm/peptides_plot_micro-2.png)<!-- -->
+
+Total of peptides identified:
+
+``` r
+sum(summary_df_micro$`Peptide Sequences Identified`)
+```
+
+    ## [1] 362396
+
+Summary:
+
+``` r
+summary(summary_df_micro$`Peptide Sequences Identified`)
+```
+
+    ##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+    ##      32     615     792    1290    1226   38209
+
+#### Percentage of MS/MS Identified
+
+``` r
+ggplot(data = summary_df_micro, aes(x =`MS/MS Identified [%]` )) +
+  geom_histogram(binwidth = 0.5) +
+  scale_x_continuous(breaks = seq(0,23, by = 1)) +
+  scale_y_continuous(breaks = seq(0,70, by = 5)) +
+  theme_classic()
+```
+
+![](human_rectal_cancer_files/figure-gfm/msms_plot_micro-1.png)<!-- -->
+
+``` r
+summary_df_micro %>%
+ggplot(aes(x =`Raw file`,
+           y =`MS/MS Identified [%]`))+
+  geom_point(stat = "identity") +
+  scale_y_continuous(expand = c(0,0), limits = c(0,25)) +
+  theme_classic() +
+  theme(axis.text.x = element_text(size = 1, angle = 90))
+```
+
+![](human_rectal_cancer_files/figure-gfm/msms_plot_micro-2.png)<!-- -->
+
+Summary:
+
+``` r
+summary(summary_df_micro$`MS/MS Identified [%]`)
+```
+
+    ##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+    ##   0.320   2.100   3.000   4.155   4.700  18.000
+
+#### Standard protein
+
+``` r
+pg_df_micro <- read.table("data_raw/microbiome/proteinGroups_clean.txt",
+                 header = TRUE,
+                 sep = "\t",
+                 check.names = FALSE)
+
+pg_df_micro %>%
+  filter(`Protein IDs` == "sp|P00924|;O2.UC17-1_GL0070718" | `Protein IDs` == "P00330") %>%
+  pivot_longer(cols = 2:281,
+               names_to = "samples",
+               values_to = "Int") %>%
+  mutate(log_int = log10(Int)) %>%
+  ggplot(aes(x = samples,
+             y = log_int,
+           colour =`Protein IDs`)) +
+  geom_point() +
+  theme_classic() +
+  theme(axis.text.x = element_text(size = 1, angle = 90))
+```
+
+![](human_rectal_cancer_files/figure-gfm/proteingroup_micro-1.png)<!-- -->
+
+``` r
+pg_df_micro %>%
+  filter(`Protein IDs` == "sp|P00924|;O2.UC17-1_GL0070718" | `Protein IDs` == "P00330") %>%
+  pivot_longer(cols = 2:281,
+               names_to = "samples",
+               values_to = "Int") %>%
+  mutate(log_int = log10(Int)) %>%
+  ggplot(aes(x = `Protein IDs`,
+             y = log_int,
+           colour =`Protein IDs`)) +
+  geom_boxplot() +
+  geom_jitter(width = 0.2, color = "black") +
+  theme_classic() +
+  theme(axis.text.x = element_text(size = 1, angle = 90))
+```
+
+![](human_rectal_cancer_files/figure-gfm/proteingroup_micro-2.png)<!-- -->
+
+  - Enolase 1 clustered with [Enolase (Slackia piriformis
+    YIT 12062)](https://www.uniprot.org/blast/uniprot/B20201111A94466D2655679D1FD8953E075198DA80108F2H)
+
+<!-- end list -->
+
+``` r
+pg_df_micro %>%
+  filter(`Protein IDs` == "sp|P00924|;O2.UC17-1_GL0070718") %>%
+  pivot_longer(cols = 2:281,
+               names_to = "samples",
+               values_to = "Int") %>%
+  summary()
+```
+
+    ##  Protein IDs          samples               Int           
+    ##  Length:280         Length:280         Min.   :1.941e+09  
+    ##  Class :character   Class :character   1st Qu.:7.956e+09  
+    ##  Mode  :character   Mode  :character   Median :1.635e+10  
+    ##                                        Mean   :7.971e+10  
+    ##                                        3rd Qu.:5.047e+10  
+    ##                                        Max.   :1.342e+12
 
 ## My computer
 
